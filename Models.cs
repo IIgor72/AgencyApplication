@@ -11,7 +11,24 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AgencyApplication
-{// Airline
+{
+
+    // ENUMs
+    public enum FlightStatusType
+    {
+        Scheduled,
+        In_Progress,
+        Completed,
+        Cancelled
+    }
+
+    public enum AccessLevelType
+    {
+        Administrator,
+        User
+    }
+
+    // Airline
     public class Airline
     {
         public int ID { get; set; }
@@ -122,18 +139,4 @@ namespace AgencyApplication
         public AccessLevelType AccessLevel { get; set; }
     }
 
-    // ENUMs
-    public enum FlightStatusType
-    {
-        Scheduled,
-        InProgress,
-        Completed,
-        Canceled
-    }
-
-    public enum AccessLevelType
-    {
-        Administrator,
-        User
-    }
 }

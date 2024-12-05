@@ -55,6 +55,23 @@ namespace AgencyApplication
                 .HasIndex(f => f.FlightNumber)
                 .IsUnique();
 
+            // Настройка для перечислений (enum)
+            // Преобразуем FlightStatus из enum в строку и обратно
+            modelBuilder.Entity<FlightList>()
+                .Property(f => f.FlightStatus)
+                .HasConversion(
+                    v => v.ToString().Replace("_", " "),  // Заменяем подчеркивания на пробелы при сохранении
+                    v => (FlightStatusType)Enum.Parse(typeof(FlightStatusType), v.Replace(" ", "_"))  // Заменяем пробелы на подчеркивания при извлечении
+                );
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.AccessLevel)
+                .HasConversion(
+                    v => v.ToString().Replace("_", " "),  // Заменяем подчеркивания на пробелы при сохранении
+                    v => (AccessLevelType)Enum.Parse(typeof(AccessLevelType), v.Replace(" ", "_"))  // Заменяем пробелы на подчеркивания при извлечении
+                );
+
+
             // Настройка связей
             modelBuilder.Entity<Aircraft>()
                 .HasOne(a => a.Airline)

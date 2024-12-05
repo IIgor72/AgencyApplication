@@ -19,11 +19,21 @@ namespace AgencyApplication
     /// </summary>
     public partial class MainFunctionalityAdminWindow : Window
     {
-        //private ApplicationDbContext context = new ApplicationDbContext();
+        private ApplicationDbContext _context;
 
         public MainFunctionalityAdminWindow()
         {
             InitializeComponent();
+            _context = new ApplicationDbContext();
+            LoadData(); // Загружаем данные при инициализации
+        }
+
+        // Загрузка данных в DataGrid
+        private void LoadData()
+        {
+            // Например, загружаем данные о рейсах
+            var flights = _context.Flights.ToList();
+            DataGridDisplay.ItemsSource = flights;
         }
 
         private void DataOfFlights_Click(object sender, RoutedEventArgs e)
@@ -149,14 +159,71 @@ namespace AgencyApplication
             return newObject;
         }
 
-
-
         // Обработка кнопки "Выход"
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
         }
 
+        // Обработчик кнопки "Добавить запись"
+        private void AddRecord_Click(object sender, RoutedEventArgs e)
+        {
+            var newFlight = new Flight
+            {
+                FlightNumber = "FL123", // Здесь могут быть значения по умолчанию или данные из TextBox
+                DepartureTime = TimeSpan.FromHours(10),
+                DepartureDate = DateTime.Now.AddDays(1)
+            };
 
+            _context.Flights.Add(newFlight); // Добавляем в контекст
+            _context.SaveChanges(); // Сохраняем изменения в БД
+            LoadData(); // Перезагружаем данные в DataGrid
+        }
+
+        // Обработчик кнопки "Удалить запись"
+        private void DeleteRecord_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataGridDisplay.SelectedItem is Flight selectedFlight)
+            {
+                _context.Flights.Remove(selectedFlight); // Удаляем запись из контекста
+                _context.SaveChanges(); // Сохраняем изменения в БД
+                LoadData(); // Перезагружаем данные в DataGrid
+            }
+            else
+            {
+                MessageBox.Show("Выберите запись для удаления");
+            }
+        }
+
+        // Обработчик события окончания редактирования ячейки
+        private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            // Получаем редактируемую строку
+            var editedItem = e.Row.Item as Flight;
+
+            // Получаем новое значение в редактируемой ячейке
+            var cell = e.EditingElement as TextBox;
+            var newValue = cell?.Text;
+
+            if (editedItem != null && newValue != null)
+            {
+                // Обновляем значение в объекте
+                if (e.Column.Header.ToString() == "FlightNumber")
+                {
+                    editedItem.FlightNumber = newValue;
+                }
+                else if (e.Column.Header.ToString() == "DepartureTime")
+                {
+                    editedItem.DepartureTime = TimeSpan.Parse(newValue);
+                }
+                else if (e.Column.Header.ToString() == "DepartureDate")
+                {
+                    editedItem.DepartureDate = DateTime.Parse(newValue);
+                }
+
+                // Сохраняем изменения в базе данных
+                _context.SaveChanges();
+            }
+        }
     }
 }
