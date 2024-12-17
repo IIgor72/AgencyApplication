@@ -25,23 +25,55 @@ namespace AgencyApplication
             string login = LoginField.Text;
             string password = PasswordField.Password;
 
-            // Пример проверки логина и пароля
-            //if (AuthenticateUser(login, password))
+            using (ApplicationDbContext context = new ApplicationDbContext())
             {
-                MessageBox.Show("Успешный вход!");
-/*                //login = "postgres";
-                //password = "123";
-
-                // Устанавливаем подключение в зависимости от пользователя
-                string connectionString = GetConnectionString(login, password);
-                MessageBox.Show(connectionString);*/
                 try
                 {
+                    if (login == "")
                     {
-                        // Здесь можно вызвать метод для отображения следующего окна или выполнения операций
-                        MainFunctionalityAdminWindow functionalityWindow = new MainFunctionalityAdminWindow();
-                        functionalityWindow.Show();
-                        this.Close();
+                        MessageBox.Show("Заполните поле \"Логин\"");
+                    }
+
+                    if (password == "")
+                    {
+                        MessageBox.Show("Заполните поле \"Пароль\"");
+                    }
+                    if (!string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(login))
+                    {
+                        try
+                        {
+                            var findUser = context.Users.FirstOrDefault(l => l.Username == login);
+                            if (findUser == null)
+                            {
+                                throw new Exception("Учетная запись не обнаружена. Проверьте правильность введенных логина и пароля");
+                            }
+                            var findPassword = context.Users.FirstOrDefault(u => u.ID == findUser.ID).Password.ToString();
+                            var findRole = context.Users.FirstOrDefault(u => u.ID == findUser.ID).AccessLevel.ToString();
+
+                            if (findRole == "Administrator" && password == findPassword)
+                            {
+                                MessageBox.Show("Вы успешно авторизовались как \"Администратор\"");
+                                // Здесь можно вызвать метод для отображения следующего окна или выполнения операций
+                                MainFunctionalityAdminWindow functionalityWindow = new MainFunctionalityAdminWindow();
+                                functionalityWindow.Show();
+                                this.Close();
+                            }
+                            else if (findRole == "User" && password == findPassword)
+                            {
+                                MessageBox.Show("Вы успешно авторизовались как \"Пользователь\"");
+                                MainFunctionalityUserWindow functionalityUserWindow = new MainFunctionalityUserWindow();
+                                functionalityUserWindow.Show();
+                                this.Close();
+                            }
+                            else 
+                            {
+                                MessageBox.Show("Логин или пароль введены неверно"); 
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -49,28 +81,6 @@ namespace AgencyApplication
                     MessageBox.Show($"Ошибка подключения к базе данных: {ex.Message}");
                 }
             }
-/*            else
-            {
-                MessageBox.Show("Неверный логин или пароль.");
-            }*/
         }
-
-/*        private bool AuthenticateUser(string login, string password)
-        {
-            if ((login == "Admin" && password == "admin") || (login == "User" && password == "user"))
-                return true;
-
-            return false;
-        }
-
-        private string GetConnectionString(string login, string password)
-        {
-            // Настройка строки подключения в зависимости от роли
-            string host = "localhost";
-            string port = "5432";
-            string database = "Agency";
-            return $"Host={host};Username={login};Password={password};Database={database};Port={port};";
-        }*/
-
     }
 }

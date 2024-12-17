@@ -31,6 +31,7 @@ namespace AgencyApplication
     // Airline
     public class Airline
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public string Name { get; set; }
@@ -41,6 +42,7 @@ namespace AgencyApplication
     // Aircraft
     public class Aircraft
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public string Model { get; set; }
@@ -55,6 +57,7 @@ namespace AgencyApplication
     // Airport
     public class Airport
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public string Name { get; set; }
@@ -64,6 +67,7 @@ namespace AgencyApplication
     // Flight
     public class Flight
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public string FlightNumber { get; set; }
@@ -102,6 +106,7 @@ namespace AgencyApplication
     // Ticket
     public class Ticket
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public decimal Price { get; set; }
@@ -119,6 +124,7 @@ namespace AgencyApplication
     // Flight List
     public class FlightList
     {
+        [Key]
         public int ID { get; set; }
         public string FlightNumber { get; set; }
         [Required]
@@ -130,6 +136,7 @@ namespace AgencyApplication
     // User
     public class User
     {
+        [Key]
         public int ID { get; set; }
         [Required]
         public string Username { get; set; }

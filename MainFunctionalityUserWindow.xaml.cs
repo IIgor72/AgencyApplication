@@ -14,36 +14,36 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
 
 namespace AgencyApplication
 {
     /// <summary>
-    /// Логика взаимодействия для MainFunctionalityAdminWindow.xaml
+    /// Логика взаимодействия для MainFunctionalityUserWindow.xaml
     /// </summary>
-    public partial class MainFunctionalityAdminWindow : Window
+    public partial class MainFunctionalityUserWindow : Window
     {
         private ApplicationDbContext _context;
         private Type _selectedTableType;
 
-        public MainFunctionalityAdminWindow()
+        public MainFunctionalityUserWindow()
         {
             InitializeComponent();
             _context = new ApplicationDbContext();
-            TableSelectionComboBox.ItemsSource = GetTableTypes().Select(t => new { Name = t.Name }).ToList(); // Отображаем названия типов
-            TableSelectionComboBox.SelectedIndex = 0; // Выбираем первую таблицу по умолчанию
+            TableSelectionUserComboBox.ItemsSource = GetTableUserTypes().Select(t => new { Name = t.Name }).ToList(); // Отображаем названия типов
+            TableSelectionUserComboBox.SelectedIndex = 0; // Выбираем первую таблицу по умолчанию
         }
 
-        private Type[] GetTableTypes()
+
+        private Type[] GetTableUserTypes()
         {
-            return new[] { typeof(Flight), typeof(Passenger), typeof(Ticket), typeof(Airport), typeof(Airline), typeof(Aircraft), typeof(User), typeof(FlightList) };
+            return new[] { typeof(Flight), typeof(Passenger), typeof(Ticket), typeof(Airport), typeof(Airline), typeof(Aircraft), typeof(FlightList) };
         }
 
-        private void TableSelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TableSelectionUserChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (TableSelectionComboBox.SelectedItem != null)
+            if (TableSelectionUserComboBox.SelectedItem != null)
             {
-                _selectedTableType = GetTableTypes().FirstOrDefault(t => t.Name == ((dynamic)TableSelectionComboBox.SelectedItem).Name);
+                _selectedTableType = GetTableUserTypes().FirstOrDefault(t => t.Name == ((dynamic)TableSelectionUserComboBox.SelectedItem).Name);
                 LoadData();
             }
         }
@@ -87,161 +87,9 @@ namespace AgencyApplication
             return null;
         }
 
-
-        // Обработка кнопки "Выход"
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
-        }
-
-        // Добавление новой записи в таблицу
-        private void AddRecord_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedTableType != null)
-            {
-                var addRecordWindow = new AddRecordWindow(_selectedTableType);
-                if (addRecordWindow.ShowDialog() == true)
-                {
-                    var newEntity = addRecordWindow.NewEntity;
-
-                    if (newEntity != null)
-                    {
-                        // Проверка уникальности первичных ключей
-                        if (IsPrimaryKeyDuplicate(newEntity))
-                        {
-                            MessageBox.Show("Ошибка: запись с таким ключом уже существует.");
-                            return;
-                        }
-
-                        var dbSet = GetDbSetForEntity(_selectedTableType);
-                        var addMethod = dbSet.GetType().GetMethod("Add");
-                        addMethod.Invoke(dbSet, new[] { newEntity });
-
-                        _context.SaveChanges(); // Сохраняем изменения
-                        LoadData(); // Обновляем данные в DataGrid
-                    }
-                }
-            }
-        }
-
-        private bool IsPrimaryKeyDuplicate(object newEntity)
-        {
-            try
-            {
-                var dbSet = GetDbSetForEntity(_selectedTableType);
-                var keyProperties = _selectedTableType.GetProperties()
-                    .Where(p => p.GetCustomAttributes(typeof(KeyAttribute), true).Any()) // Поиск атрибутов [Key]
-                    .ToList();
-
-                if (!keyProperties.Any())
-                {
-                    MessageBox.Show("Ошибка: не найдены ключевые свойства для проверки уникальности.");
-                    return false; // Предполагаем, что ключей нет
-                }
-
-                foreach (var entity in (IEnumerable<object>)dbSet)
-                {
-                    bool isDuplicate = keyProperties.All(keyProperty =>
-                    {
-                        var existingValue = keyProperty.GetValue(entity);
-                        var newValue = keyProperty.GetValue(newEntity);
-                        return existingValue != null && existingValue.Equals(newValue);
-                    });
-
-                    if (isDuplicate)
-                        return true; // Найден дубликат
-                }
-
-                return false; // Нет дубликатов
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при проверке уникальности ключей: {ex.Message}");
-                return true; // Возвращаем true, чтобы предотвратить добавление при ошибке
-            }
-        }
-
-
-        // Удаление записи из таблицы
-        private void DeleteRecord_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataGridDisplay.SelectedItem != null)
-            {
-                var selectedEntity = DataGridDisplay.SelectedItem;
-
-
-                var dbSet = GetDbSetForEntity(selectedEntity.GetType()); // Получаем DbSet для типа записи
-                var removeMethod = dbSet.GetType().GetMethod("Remove"); // Получаем метод Remove для удаления записи
-                removeMethod.Invoke(dbSet, new[] { selectedEntity }); // Удаляем запись
-
-                _context.SaveChanges(); // Сохраняем изменения
-                LoadData(); // Обновляем данные в DataGrid
-            }
-            else
-            {
-                MessageBox.Show("Выберите запись для удаления");
-            }
-        }
-
-
-
-        // Обработчик окончания редактирования ячейки
-        private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-        {
-            var editedItem = e.Row.Item;
-            if (editedItem != null)
-            {
-                var editedProperty = e.Column.Header.ToString(); // Название редактируемого столбца
-                var propertyInfo = _selectedTableType.GetProperty(editedProperty);
-                var editedValue = (e.EditingElement as TextBox)?.Text;
-
-                if (propertyInfo != null && editedValue != null)
-                {
-                    try
-                    {
-                        // Проверяем, является ли редактируемое поле ключевым
-                        var isPrimaryKey = propertyInfo.GetCustomAttributes(typeof(KeyAttribute), true).Any();
-
-                        // Если редактируется ключевое поле, проверяем уникальность
-                        if (isPrimaryKey)
-                        {
-                            var originalValue = propertyInfo.GetValue(editedItem);
-                            if (!originalValue.Equals(Convert.ChangeType(editedValue, propertyInfo.PropertyType)))
-                            {
-                                // Создаем копию объекта с измененным значением ключевого поля
-                                var tempEditedItem = Activator.CreateInstance(_selectedTableType);
-                                foreach (var prop in _selectedTableType.GetProperties())
-                                {
-                                    if (prop.Name == propertyInfo.Name)
-                                    {
-                                        prop.SetValue(tempEditedItem, Convert.ChangeType(editedValue, prop.PropertyType));
-                                    }
-                                    else
-                                    {
-                                        prop.SetValue(tempEditedItem, prop.GetValue(editedItem));
-                                    }
-                                }
-
-                                // Проверяем, не возникает ли дубликат
-                                if (IsPrimaryKeyDuplicate(tempEditedItem))
-                                {
-                                    MessageBox.Show("Ошибка: изменение приводит к конфликту ключей. Операция отменена.");
-                                    e.Cancel = true;
-                                    return;
-                                }
-                            }
-                        }
-
-                        // Применяем изменение
-                        propertyInfo.SetValue(editedItem, Convert.ChangeType(editedValue, propertyInfo.PropertyType));
-                        _context.SaveChanges();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка при сохранении изменений: {ex.Message}");
-                    }
-                }
-            }
         }
 
         private void ReportSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -413,7 +261,6 @@ namespace AgencyApplication
                 MessageBox.Show($"Ошибка при генерации отчета: {ex.Message}");
             }
         }
-
-
     }
+
 }
