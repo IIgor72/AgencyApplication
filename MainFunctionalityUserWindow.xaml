@@ -34,6 +34,7 @@
                           HorizontalContentAlignment="Center"
                           VerticalContentAlignment="Center"/>
 
+                <Button x:Name="AddRecordButton" Content="Добавить запись" Margin="0,5" Height="40" Visibility="Collapsed" Click="AddRecord_Click"/>
                 <TextBlock Text="Отчеты:" 
                    FontSize="20" FontWeight="Bold" 
                    HorizontalAlignment="Center" 

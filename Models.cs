@@ -99,7 +99,7 @@ namespace AgencyApplication
         [Required]
         [StringLength(1)]
         public string Gender { get; set; }
-        public DateTime? BirthDate { get; set; }
+        public DateTime BirthDate { get; set; }
         public string Phone { get; set; }
     }
 

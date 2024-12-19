@@ -48,9 +48,27 @@ namespace AgencyApplication
                     };
                     FieldsPanel.Children.Add(datePicker);
                 }
+                else if (property.PropertyType.IsEnum) // Если это Enum, создаем ComboBox
+                {
+                    var comboBox = new ComboBox
+                    {
+                        Name = $"Field_{property.Name}",
+                        Tag = property, // Сохраняем свойство для связи
+                        Margin = new Thickness(0, 5, 0, 10)
+                    };
+
+                    // Получаем все возможные значения enum
+                    var enumValues = Enum.GetValues(property.PropertyType);
+                    foreach (var value in enumValues)
+                    {
+                        comboBox.Items.Add(value);
+                    }
+
+                    FieldsPanel.Children.Add(comboBox);
+                }
                 else
                 {
-                    // Создаем обычное текстовое поле для других типов данных
+                    // Для всех других типов создаем текстовое поле
                     var textBox = new TextBox
                     {
                         Name = $"Field_{property.Name}",
@@ -59,14 +77,6 @@ namespace AgencyApplication
                     };
                     FieldsPanel.Children.Add(textBox);
                 }
-/*                // Создаем текстовое поле
-                var textBox = new TextBox
-                {
-                    Name = $"Field_{property.Name}",
-                    Tag = property, // Сохраняем свойство для связи
-                    Margin = new Thickness(0, 5, 0, 10)
-                };
-                FieldsPanel.Children.Add(textBox);*/
             }
         }
 
@@ -107,9 +117,24 @@ namespace AgencyApplication
                                 }
                                 convertedValue = parsedTime;
                             }
+                            else if (property.PropertyType.IsEnum) // Обработка Enum
+                            {
+                                var comboBox = FieldsPanel.Children.OfType<ComboBox>()
+                                    .FirstOrDefault(c => c.Name == $"Field_{property.Name}");
+
+                                if (comboBox != null && comboBox.SelectedItem != null)
+                                {
+                                    convertedValue = Enum.Parse(property.PropertyType, comboBox.SelectedItem.ToString());
+                                }
+                                else
+                                {
+                                    MessageBox.Show($"Ошибка: не выбрано значение для свойства {property.Name}.");
+                                    return;
+                                }
+                            }
                             else
                             {
-                                // Общее преобразование
+                                // Общее преобразование для других типов
                                 convertedValue = Convert.ChangeType(value, property.PropertyType);
                             }
 
@@ -126,6 +151,7 @@ namespace AgencyApplication
                 MessageBox.Show($"Ошибка: {ex.Message}");
             }
         }
+
 
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

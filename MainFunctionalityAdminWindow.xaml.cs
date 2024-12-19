@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace AgencyApplication
 {
@@ -59,6 +60,8 @@ namespace AgencyApplication
                 {
                     // Выполняем ToList через LINQ
                     var data = queryable.Cast<object>().ToList();
+
+                    // Применяем данные в DataGrid
                     DataGridDisplay.ItemsSource = data;
                 }
                 else
@@ -71,6 +74,8 @@ namespace AgencyApplication
                 MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
             }
         }
+
+
 
         private object GetDbSetForEntity(Type entityType)
         {
@@ -95,7 +100,7 @@ namespace AgencyApplication
         }
 
         // Добавление новой записи в таблицу
-        private void AddRecord_Click(object sender, RoutedEventArgs e)
+        public void AddRecord_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedTableType != null)
             {
@@ -232,8 +237,53 @@ namespace AgencyApplication
                             }
                         }
 
-                        // Применяем изменение
-                        propertyInfo.SetValue(editedItem, Convert.ChangeType(editedValue, propertyInfo.PropertyType));
+                        // Обработка для типов DateTime
+                        if (propertyInfo.PropertyType == typeof(DateTime))
+                        {
+                            DateTime parsedDate;
+                            if (DateTime.TryParseExact(editedValue, new string[] { "yyyy-MM-dd", "yyyy/MM/dd" }, null, System.Globalization.DateTimeStyles.None, out parsedDate))
+                            {
+                                propertyInfo.SetValue(editedItem, parsedDate);
+                            }
+                            else
+                            {
+                                MessageBox.Show($"Ошибка: неверный формат даты для свойства {editedProperty}. Ожидаемый формат: ГГГГ-ММ-ДД.");
+                                e.Cancel = true;
+                                return;
+                            }
+                        }
+                        else if (propertyInfo.PropertyType == typeof(TimeSpan))
+                        {
+                            // Попытка преобразования строки во время
+                            if (!TimeSpan.TryParseExact(editedValue, @"hh\:mm\:ss", null, System.Globalization.TimeSpanStyles.None, out TimeSpan parsedTime))
+                            {
+                                MessageBox.Show($"Ошибка: неверный формат времени для свойства {propertyInfo.Name}. Ожидаемый формат: ЧЧ:ММ.");
+                                return;
+                            }
+                            propertyInfo.SetValue(editedItem, parsedTime);
+                        }
+                        // Обработка для типов Enum
+                        else if (propertyInfo.PropertyType.IsEnum)
+                        {
+                            try
+                            {
+                                var enumValue = Enum.Parse(propertyInfo.PropertyType, editedValue);
+                                propertyInfo.SetValue(editedItem, enumValue);
+                            }
+                            catch (ArgumentException)
+                            {
+                                MessageBox.Show($"Ошибка: неверное значение для перечисления {editedProperty}.");
+                                e.Cancel = true;
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            // Для других типов, выполняем стандартное преобразование
+                            propertyInfo.SetValue(editedItem, Convert.ChangeType(editedValue, propertyInfo.PropertyType));
+                        }
+
+                        // Сохраняем изменения в базе данных
                         _context.SaveChanges();
                     }
                     catch (Exception ex)
@@ -243,6 +293,7 @@ namespace AgencyApplication
                 }
             }
         }
+
 
         private void ReportSelectionChanged(object sender, SelectionChangedEventArgs e)
         {

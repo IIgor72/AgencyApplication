@@ -14,12 +14,11 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace AgencyApplication
 {
-    /// <summary>
-    /// Логика взаимодействия для MainFunctionalityUserWindow.xaml
-    /// </summary>
     public partial class MainFunctionalityUserWindow : Window
     {
         private ApplicationDbContext _context;
@@ -44,6 +43,16 @@ namespace AgencyApplication
             if (TableSelectionUserComboBox.SelectedItem != null)
             {
                 _selectedTableType = GetTableUserTypes().FirstOrDefault(t => t.Name == ((dynamic)TableSelectionUserComboBox.SelectedItem).Name);
+
+                if (_selectedTableType == typeof(Airport) || _selectedTableType == typeof(Airline)) 
+                {
+                    AddRecordButton.Visibility = Visibility.Visible;    
+                }
+                else
+                {
+                    AddRecordButton.Visibility = Visibility.Collapsed;
+                }
+
                 LoadData();
             }
         }
@@ -90,6 +99,73 @@ namespace AgencyApplication
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
+        }
+
+        private void AddRecord_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedTableType != null)
+            {
+                var addRecordWindow = new AddRecordWindow(_selectedTableType);
+                if (addRecordWindow.ShowDialog() == true)
+                {
+                    var newEntity = addRecordWindow.NewEntity;
+
+                    if (newEntity != null)
+                    {
+                        // Проверка уникальности первичных ключей
+                        if (IsPrimaryKeyDuplicate(newEntity))
+                        {
+                            MessageBox.Show("Ошибка: запись с таким ключом уже существует.");
+                            return;
+                        }
+
+                        var dbSet = GetDbSetForEntity(_selectedTableType);
+                        var addMethod = dbSet.GetType().GetMethod("Add");
+                        addMethod.Invoke(dbSet, new[] { newEntity });
+
+                        _context.SaveChanges(); // Сохраняем изменения
+                        LoadData(); // Обновляем данные в DataGrid
+                    }
+                }
+            }
+          
+        }
+
+        private bool IsPrimaryKeyDuplicate(object newEntity)
+        {
+            try
+            {
+                var dbSet = GetDbSetForEntity(_selectedTableType);
+                var keyProperties = _selectedTableType.GetProperties()
+                    .Where(p => p.GetCustomAttributes(typeof(KeyAttribute), true).Any()) // Поиск атрибутов [Key]
+                    .ToList();
+
+                if (!keyProperties.Any())
+                {
+                    MessageBox.Show("Ошибка: не найдены ключевые свойства для проверки уникальности.");
+                    return false; // Предполагаем, что ключей нет
+                }
+
+                foreach (var entity in (IEnumerable<object>)dbSet)
+                {
+                    bool isDuplicate = keyProperties.All(keyProperty =>
+                    {
+                        var existingValue = keyProperty.GetValue(entity);
+                        var newValue = keyProperty.GetValue(newEntity);
+                        return existingValue != null && existingValue.Equals(newValue);
+                    });
+
+                    if (isDuplicate)
+                        return true; // Найден дубликат
+                }
+
+                return false; // Нет дубликатов
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при проверке уникальности ключей: {ex.Message}");
+                return true; // Возвращаем true, чтобы предотвратить добавление при ошибке
+            }
         }
 
         private void ReportSelectionChanged(object sender, SelectionChangedEventArgs e)
